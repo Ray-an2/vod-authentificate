@@ -1,23 +1,18 @@
 services:
-  mariadb:
-    image: mariadb:latest
+  authentificate:
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: authentificate
-    environment:
-      MARIADB_ROOT_PASSWORD: monMotDePasseSuperSecret
-      MARIADB_DATABASE: authentificate
-      MARIADB_USER: authentificate_user
-      MARIADB_PASSWORD: authentificate_password
-    volumes:
-      - ./docker/data:/var/lib/mysql
-      - ./docker/init:/docker-entrypoint-initdb.d:ro
     ports:
-      - "11062:3306"
-    healthcheck:
-      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-uroot", "-pmonMotDePasseSuperSecret"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-# Note architecture:
-# - La base utilisateurs de user.api n'est PAS définie ici (boite noire).
-# - authentificate doit interroger user.api via HTTP, pas sa BDD directement.
+      - "11062:8080"
+    environment:
+      USER_API_BASE_URL: http://user-api:8080/api
+      USER_API_USERS_BY_PSEUDO_PATH: /users/pseudo/{pseudo}
+      AUTH_TOKEN_SECRET: change-this-secret-key-with-at-least-32-characters
+      AUTH_TOKEN_EXPIRATION_SECONDS: 10800
+      SPRING_DATASOURCE_URL: jdbc:h2:mem:authdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.h2.Driver
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD: ""
+    restart: unless-stopped
