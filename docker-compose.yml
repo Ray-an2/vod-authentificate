@@ -1,0 +1,23 @@
+services:
+  mariadb:
+    image: mariadb:latest
+    container_name: authentificate
+    environment:
+      MARIADB_ROOT_PASSWORD: monMotDePasseSuperSecret
+      MARIADB_DATABASE: authentificate
+      MARIADB_USER: authentificate_user
+      MARIADB_PASSWORD: authentificate_password
+    volumes:
+      - ./docker/data:/var/lib/mysql
+      - ./docker/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "11062:3306"
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-uroot", "-pmonMotDePasseSuperSecret"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+# Note architecture:
+# - La base utilisateurs de user.api n'est PAS définie ici (boite noire).
+# - authentificate doit interroger user.api via HTTP, pas sa BDD directement.
