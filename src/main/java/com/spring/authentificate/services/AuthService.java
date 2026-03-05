@@ -8,4 +8,6 @@ public interface AuthService {
     AuthResponseDto login(LoginRequestDto loginRequestDto);
 
     void verifyToken(String authorizationHeader);
+
+    void logout(String authorizationHeader);
 }

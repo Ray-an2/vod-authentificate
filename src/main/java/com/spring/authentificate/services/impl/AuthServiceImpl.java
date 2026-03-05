@@ -11,7 +11,6 @@ import com.spring.authentificate.services.AuthService;
 import com.spring.authentificate.services.TokenService;
 import io.jsonwebtoken.JwtException;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -26,30 +25,23 @@ public class AuthServiceImpl implements AuthService {
     private final TokenService tokenService;
     private final AuthTokenRepository authTokenRepository;
     private final AuthMapper authMapper;
-    private final PasswordEncoder passwordEncoder;
 
     public AuthServiceImpl(
             UserApiClient userApiClient,
             TokenService tokenService,
             AuthTokenRepository authTokenRepository,
-            AuthMapper authMapper,
-            PasswordEncoder passwordEncoder
+            AuthMapper authMapper
     ) {
         this.userApiClient = userApiClient;
         this.tokenService = tokenService;
         this.authTokenRepository = authTokenRepository;
         this.authMapper = authMapper;
-        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     public AuthResponseDto login(LoginRequestDto loginRequestDto) {
-        UserAccountDto user = userApiClient.findByPseudo(loginRequestDto.getPseudo())
+        UserAccountDto user = userApiClient.findByLogin(loginRequestDto.getPseudo(), loginRequestDto.getMdp())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur non trouve"));
-
-        if (!isPasswordValid(loginRequestDto.getMdp(), user.getPasswordHash())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Identifiants invalides");
-        }
 
         String token = tokenService.generateToken(user.getPseudo(), user.getRole());
 
@@ -58,7 +50,6 @@ public class AuthServiceImpl implements AuthService {
         authToken.setRole(user.getRole());
         authToken.setToken(token);
         authToken.setExpiresAt(Instant.now().plusSeconds(tokenService.getExpirationSeconds()));
-        authToken.setRevoked(false);
 
         AuthToken savedToken = authTokenRepository.save(authToken);
         return authMapper.toAuthResponse(savedToken);
@@ -75,7 +66,7 @@ public class AuthServiceImpl implements AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token invalide ou expire", exception);
         }
 
-        AuthToken authToken = authTokenRepository.findByTokenAndRevokedFalse(token)
+        AuthToken authToken = authTokenRepository.findByToken(token)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token inconnu"));
 
         if (authToken.getExpiresAt().isBefore(Instant.now())) {
@@ -83,16 +74,13 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    private boolean isPasswordValid(String rawPassword, String passwordHash) {
-        if (passwordHash == null || passwordHash.isBlank()) {
-            return false;
+    @Override
+    public void logout(String authorizationHeader) {
+        String token = extractToken(authorizationHeader);
+        if (!authTokenRepository.existsById(token)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token inconnu");
         }
-
-        if (passwordHash.startsWith("$2a$") || passwordHash.startsWith("$2b$") || passwordHash.startsWith("$2y$")) {
-            return passwordEncoder.matches(rawPassword, passwordHash);
-        }
-
-        return rawPassword.equals(passwordHash);
+        authTokenRepository.deleteById(token);
     }
 
     private String extractToken(String authorizationHeader) {

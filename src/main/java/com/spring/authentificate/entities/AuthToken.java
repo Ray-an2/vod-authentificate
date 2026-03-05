@@ -24,9 +24,6 @@ public class AuthToken {
     @Column(nullable = false)
     private Instant expiresAt;
 
-    @Column(nullable = false)
-    private boolean revoked;
-
     public String getPseudo() {
         return pseudo;
     }
@@ -59,11 +56,4 @@ public class AuthToken {
         this.expiresAt = expiresAt;
     }
 
-    public boolean isRevoked() {
-        return revoked;
-    }
-
-    public void setRevoked(boolean revoked) {
-        this.revoked = revoked;
-    }
 }

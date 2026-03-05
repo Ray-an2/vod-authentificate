@@ -14,22 +14,26 @@ import java.util.Optional;
 public class UserApiClientImpl implements UserApiClient {
 
     private final RestClient restClient;
-    private final String usersByPseudoPath;
+    private final String loginCheckPath;
 
     public UserApiClientImpl(
             RestClient.Builder restClientBuilder,
             @Value("${user.api.base-url}") String baseUrl,
-            @Value("${user.api.users-by-pseudo-path:/users/pseudo/{pseudo}}") String usersByPseudoPath
+            @Value("${user.api.login-check-path:/users/login}") String loginCheckPath
     ) {
         this.restClient = restClientBuilder.baseUrl(baseUrl).build();
-        this.usersByPseudoPath = usersByPseudoPath;
+        this.loginCheckPath = loginCheckPath;
     }
 
     @Override
-    public Optional<UserAccountDto> findByPseudo(String pseudo) {
+    public Optional<UserAccountDto> findByLogin(String pseudo, String mdp) {
         try {
             UserAccountDto account = restClient.get()
-                    .uri(usersByPseudoPath, pseudo)
+                    .uri(uriBuilder -> uriBuilder
+                            .path(loginCheckPath)
+                            .queryParam("pseudo", pseudo)
+                            .queryParam("mdp", mdp)
+                            .build())
                     .retrieve()
                     .body(UserAccountDto.class);
             return Optional.ofNullable(account);

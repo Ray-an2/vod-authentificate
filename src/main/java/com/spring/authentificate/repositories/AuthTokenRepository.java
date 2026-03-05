@@ -8,7 +8,7 @@ import java.util.Optional;
 
 public interface AuthTokenRepository extends JpaRepository<AuthToken, String> {
 
-    Optional<AuthToken> findByTokenAndRevokedFalse(String token);
+    Optional<AuthToken> findByToken(String token);
 
     void deleteByExpiresAtBefore(Instant now);
 }
